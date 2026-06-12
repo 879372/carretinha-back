@@ -8,9 +8,9 @@ env = environ.Env(DEBUG=(bool, False))
 BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG")
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+SECRET_KEY = env("SECRET_KEY", default="fallback-secret-do-not-use-in-prod")
+DEBUG = env("DEBUG", default=False)
+ALLOWED_HOSTS = ["*"]  # Força aceitar qualquer domínio do Railway
 
 INSTALLED_APPS = [
     "daphne",

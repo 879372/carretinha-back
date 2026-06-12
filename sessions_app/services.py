@@ -35,17 +35,7 @@ def _send_message_task(number, text, instance_name):
     }
     
     try:
-        print("\n=== INICIANDO DISPARO WHATSAPP ===")
-        print(f"Instância Remetente: {instance_name}")
-        print(f"Número Destino: {number}")
-        print(f"Mensagem: {text}")
-        
         response = requests.post(url, json=payload, headers=headers, timeout=10)
-        
-        print(f"Status Retornado: {response.status_code}")
-        print(f"Resposta da Evolution API: {response.text}")
-        print("==================================\n")
-        
         response.raise_for_status()
     except Exception as e:
         print(f"Failed to send Evolution API message to {number}: {e}")

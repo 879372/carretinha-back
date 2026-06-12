@@ -11,6 +11,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("SECRET_KEY", default="fallback-secret-do-not-use-in-prod")
 DEBUG = env("DEBUG", default=False)
 ALLOWED_HOSTS = ["*"]  # Força aceitar qualquer domínio do Railway
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "daphne",

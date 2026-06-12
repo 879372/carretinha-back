@@ -127,9 +127,7 @@ if USE_S3:
     AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
     AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL', default=None)
-    AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_QUERYSTRING_AUTH = False
 
     STORAGES = {
         "default": {

@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "daphne -b 0.0.0.0 -p $PORT playground.asgi:application"
-releaseCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+startCommand = "python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT playground.asgi:application"
+releaseCommand = "python manage.py migrate --noinput"
 restartPolicyType = "ON_FAILURE"

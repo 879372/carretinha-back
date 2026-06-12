@@ -5,3 +5,9 @@ builder = "nixpacks"
 startCommand = "python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT playground.asgi:application"
 releaseCommand = "python manage.py migrate --noinput"
 restartPolicyType = "ON_FAILURE"
+
+[[deploy.regions]]
+region = "us-east"
+cpuLimit = 250
+memoryLimit = 256
+

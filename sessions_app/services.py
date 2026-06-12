@@ -5,10 +5,13 @@ import threading
 
 def _send_message_task(number, text, instance_name):
     api_url = os.environ.get("WHATSAPP_API_URL", "").rstrip("/")
-    instance = instance_name or os.environ.get("WHATSAPP_INSTANCE", "")
     api_key = os.environ.get("WHATSAPP_API_KEY", "")
     
-    if not api_url or not instance or not api_key:
+    if not instance_name:
+        print("Company has no WhatsApp instance configured. Skipping message.")
+        return
+
+    if not api_url or not api_key:
         print("Evolution API credentials not configured in .env")
         return
 
@@ -17,7 +20,7 @@ def _send_message_task(number, text, instance_name):
     if not number.startswith("55") and len(number) <= 11:
         number = "55" + number
     
-    url = f"{api_url}/message/sendText/{instance}"
+    url = f"{api_url}/message/sendText/{instance_name}"
     
     headers = {
         "apikey": api_key,

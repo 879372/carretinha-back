@@ -19,12 +19,12 @@ class PaymentMethodAdmin(admin.ModelAdmin):
 
 @admin.register(Child)
 class ChildAdmin(admin.ModelAdmin):
-    list_display = ("name", "company", "guardian_name", "guardian_phone")
+    list_display = ("name", "company", "guardian_name", "guardian_whatsapp")
     list_filter = ("company",)
-    search_fields = ("name", "guardian_name", "guardian_phone")
+    search_fields = ("name", "guardian_name", "guardian_whatsapp")
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ("child", "company", "status", "start_time", "end_time")
+    list_display = ("child", "company", "status", "started_at", "finished_at")
     list_filter = ("company", "status")
     search_fields = ("child__name",)

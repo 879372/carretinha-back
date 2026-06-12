@@ -4,9 +4,9 @@ import requests
 import threading
 
 def _send_message_task(number, text, instance_name):
-    api_url = os.environ.get("EVOLUTION_API_URL", "").rstrip("/")
-    instance = instance_name or os.environ.get("EVOLUTION_INSTANCE_NAME", "")
-    api_key = os.environ.get("EVOLUTION_API_KEY", "")
+    api_url = os.environ.get("WHATSAPP_API_URL", "").rstrip("/")
+    instance = instance_name or os.environ.get("WHATSAPP_INSTANCE", "")
+    api_key = os.environ.get("WHATSAPP_API_KEY", "")
     
     if not api_url or not instance or not api_key:
         print("Evolution API credentials not configured in .env")

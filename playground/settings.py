@@ -114,6 +114,10 @@ TIME_ZONE = "America/Recife"
 USE_I18N = True
 USE_TZ = True
 
+# Static
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 # S3 Configuration
 USE_S3 = env.bool('USE_S3', default=False)
 

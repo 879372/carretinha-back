@@ -26,7 +26,9 @@ def _send_message_task(number, text, instance_name):
     
     payload = {
         "number": number,
-        "text": text
+        "textMessage": {
+            "text": text
+        }
     }
     
     try:

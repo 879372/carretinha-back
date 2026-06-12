@@ -89,11 +89,22 @@ class SessionDetailSerializer(serializers.ModelSerializer):
     plan_label = serializers.CharField(source="plan.name", read_only=True)
     plan_price = serializers.DecimalField(source="plan.price", max_digits=8, decimal_places=2, read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
+    company_name = serializers.CharField(source="company.name", read_only=True)
+    company_logo = serializers.SerializerMethodField(read_only=True)
+
+    def get_company_logo(self, obj):
+        if obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
 
     class Meta:
         model = Session
         fields = [
             "id", "public_token", "public_url_path",
+            "company_name", "company_logo",
             "child",
             "plan", "plan_label", "plan_duration_seconds", "plan_price",
             "status", "status_label",

@@ -61,6 +61,7 @@ TEMPLATES = [
 
 # ASGI — Daphne + Channels
 ASGI_APPLICATION = "playground.asgi.application"
+WSGI_APPLICATION = "playground.wsgi.application"
 
 CHANNEL_LAYERS = {
     "default": {

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Company, Session, Child, Plan, PaymentMethod
+from .models import Company, Session, Child, Plan, PaymentMethod, SessionPayment
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -20,6 +20,14 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "is_active"]
 
 
+class SessionPaymentSerializer(serializers.ModelSerializer):
+    payment_method_name = serializers.CharField(source="payment_method.name", read_only=True)
+    
+    class Meta:
+        model = SessionPayment
+        fields = ["id", "payment_method", "payment_method_name", "amount", "created_at"]
+
+
 class ChildSerializer(serializers.ModelSerializer):
     class Meta:
         model = Child
@@ -32,23 +40,34 @@ class SessionCreateSerializer(serializers.ModelSerializer):
     child_name = serializers.CharField(required=False, write_only=True)
     guardian_name = serializers.CharField(required=False, write_only=True)
     guardian_whatsapp = serializers.CharField(required=False, write_only=True)
+    plan = serializers.PrimaryKeyRelatedField(queryset=Plan.objects.all(), required=False, allow_null=True)
+    custom_duration_minutes = serializers.IntegerField(required=False, write_only=True)
+    custom_price = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, write_only=True)
+    payments = serializers.JSONField(required=False, write_only=True)
 
     class Meta:
         model = Session
         fields = [
             "id", "public_token",
             "child_id", "child_name", "guardian_name", "guardian_whatsapp",
-            "plan", "payment_method", "payment_confirmed", "amount_paid", "notes",
+            "plan", "custom_duration_minutes", "custom_price",
+            "payments", "payment_confirmed", "amount_paid", "notes",
         ]
         read_only_fields = ["id", "public_token"]
 
     def validate(self, data):
         has_child_id = "child_id" in data
-        has_inline = all(k in data for k in ["child_name", "guardian_whatsapp"])
+        has_inline = "child_name" in data
         if not has_child_id and not has_inline:
             raise serializers.ValidationError(
-                "Informe child_id (criança existente) ou os dados da criança (child_name, guardian_whatsapp)."
+                "Informe child_id (criança existente) ou o nome da criança (child_name)."
             )
+            
+        if not data.get("plan") and (data.get("custom_duration_minutes") is None or data.get("custom_price") is None):
+            raise serializers.ValidationError(
+                "Informe o plano ou a duração e preço personalizados."
+            )
+            
         return data
 
     def create(self, validated_data):
@@ -58,24 +77,52 @@ class SessionCreateSerializer(serializers.ModelSerializer):
         child_name = validated_data.pop("child_name", None)
         guardian_name = validated_data.pop("guardian_name", "")
         guardian_whatsapp = validated_data.pop("guardian_whatsapp", None)
+        custom_duration_minutes = validated_data.pop("custom_duration_minutes", None)
+        custom_price = validated_data.pop("custom_price", None)
 
         if child_id:
             child = Child.objects.get(id=child_id, company=company)
         else:
-            child, _ = Child.objects.get_or_create(
+            child = Child.objects.filter(
                 company=company,
                 guardian_whatsapp=guardian_whatsapp,
-                name=child_name,
-                defaults={
-                    "guardian_name": guardian_name,
-                },
+                name=child_name
+            ).first()
+            
+            if not child:
+                child = Child.objects.create(
+                    company=company,
+                    guardian_whatsapp=guardian_whatsapp,
+                    name=child_name,
+                    guardian_name=guardian_name
+                )
+                
+        plan = validated_data.get("plan")
+        if not plan and custom_duration_minutes and custom_price is not None:
+            plan = Plan.objects.create(
+                company=company,
+                name=f"Personalizado ({custom_duration_minutes} min)",
+                duration_minutes=custom_duration_minutes,
+                price=custom_price,
+                is_active=False
             )
+            validated_data["plan"] = plan
+
+        payments = validated_data.pop("payments", [])
 
         if "plan" in validated_data and "amount_paid" not in validated_data:
             validated_data["amount_paid"] = validated_data["plan"].price
             validated_data["payment_confirmed"] = True
 
         session = Session.objects.create(company=company, child=child, **validated_data)
+        
+        for p in payments:
+            try:
+                pm = PaymentMethod.objects.get(id=p["payment_method"], company=company)
+                SessionPayment.objects.create(session=session, payment_method=pm, amount=p["amount"])
+            except PaymentMethod.DoesNotExist:
+                continue
+
         return session
 
 
@@ -91,6 +138,7 @@ class SessionDetailSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
     company_logo = serializers.SerializerMethodField(read_only=True)
+    payments = SessionPaymentSerializer(many=True, read_only=True)
 
     def get_company_logo(self, obj):
         if obj.company.logo:
@@ -110,6 +158,6 @@ class SessionDetailSerializer(serializers.ModelSerializer):
             "status", "status_label",
             "started_at", "finished_at",
             "elapsed_seconds", "remaining_seconds",
-            "payment_method", "payment_confirmed", "amount_paid",
+            "payments", "payment_confirmed", "amount_paid",
             "notes", "created_at",
         ]

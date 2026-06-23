@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import Company, Session, Child, SessionStatus, Plan, PaymentMethod
+from .models import Company, Session, Child, SessionStatus, Plan, PaymentMethod, SessionPayment
 from .serializers import (
     CompanySerializer, PlanSerializer, PaymentMethodSerializer,
     SessionCreateSerializer, SessionDetailSerializer, ChildSerializer
@@ -154,26 +154,45 @@ class SessionViewSet(viewsets.ModelViewSet):
     def add_time(self, request, pk=None, company_id=None):
         session = self.get_object()
         plan_id = request.data.get("plan")
+        custom_duration_minutes = request.data.get("custom_duration_minutes")
+        custom_price = request.data.get("custom_price")
 
-        if not plan_id:
-            return Response({"detail": "Informe o plano para adicionar tempo."}, status=status.HTTP_400_BAD_REQUEST)
+        duration_minutes = 0
+        price = 0
 
-        plan = get_object_or_404(Plan, id=plan_id, company=session.company)
+        if plan_id:
+            plan = get_object_or_404(Plan, id=plan_id, company=session.company)
+            duration_minutes = plan.duration_minutes
+            price = plan.price
+        elif custom_duration_minutes and custom_price is not None:
+            duration_minutes = int(custom_duration_minutes)
+            price = float(custom_price)
+        else:
+            return Response({"detail": "Informe o plano ou os valores customizados para adicionar tempo."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Calcular se há "dívida" de tempo (tempo que a criança ficou a mais)
         debt = session.elapsed_seconds - session.plan_duration_seconds
         if debt > 0:
             session.added_duration_seconds += debt
             
-        session.added_duration_seconds += plan.duration_minutes * 60
+        session.added_duration_seconds += duration_minutes * 60
         
+        from decimal import Decimal
         if session.amount_paid is None:
-            session.amount_paid = plan.price
+            session.amount_paid = Decimal(str(price))
         else:
-            session.amount_paid += plan.price
+            session.amount_paid += Decimal(str(price))
             
         if session.status == SessionStatus.EXPIRED:
             session.status = SessionStatus.RUNNING
+
+        payments = request.data.get("payments", [])
+        for p in payments:
+            try:
+                pm = PaymentMethod.objects.get(id=p["payment_method"], company=session.company)
+                SessionPayment.objects.create(session=session, payment_method=pm, amount=p["amount"])
+            except PaymentMethod.DoesNotExist:
+                continue
 
         session.save()
         broadcast_session(session)
@@ -183,16 +202,19 @@ class SessionViewSet(viewsets.ModelViewSet):
     def confirm_payment(self, request, pk=None, company_id=None):
         session = self.get_object()
         session.payment_confirmed = True
-        payment_method_id = request.data.get("payment_method")
-        if payment_method_id:
-            try:
-                pm = PaymentMethod.objects.get(id=payment_method_id, company=session.company)
-                session.payment_method = pm
-            except PaymentMethod.DoesNotExist:
-                pass
+        
+        payments = request.data.get("payments")
+        if payments is not None:
+            session.payments.all().delete()
+            for p in payments:
+                try:
+                    pm = PaymentMethod.objects.get(id=p["payment_method"], company=session.company)
+                    SessionPayment.objects.create(session=session, payment_method=pm, amount=p["amount"])
+                except PaymentMethod.DoesNotExist:
+                    continue
         
         session.amount_paid = request.data.get("amount_paid", session.amount_paid)
-        session.save(update_fields=["payment_confirmed", "payment_method", "amount_paid"])
+        session.save(update_fields=["payment_confirmed", "amount_paid"])
         return Response(SessionDetailSerializer(session).data)
 
     # ── Link público (sem autenticação) ─────────────────────────────────────

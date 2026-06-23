@@ -54,8 +54,8 @@ class Child(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="children")
     name = models.CharField("Nome", max_length=100)
-    guardian_name = models.CharField("Nome do responsável", max_length=100)
-    guardian_whatsapp = models.CharField("WhatsApp", max_length=20)
+    guardian_name = models.CharField("Nome do responsável", max_length=100, blank=True, null=True)
+    guardian_whatsapp = models.CharField("WhatsApp", max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -104,11 +104,6 @@ class Session(models.Model):
     total_paused_seconds = models.PositiveIntegerField("Segundos pausados", default=0)
     finished_at = models.DateTimeField("Finalizado em", null=True, blank=True)
 
-    # Pagamento
-    payment_method = models.ForeignKey(
-        PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True,
-        verbose_name="Forma de pagamento"
-    )
     payment_confirmed = models.BooleanField("Pagamento confirmado", default=False)
     amount_paid = models.DecimalField(
         "Valor pago", max_digits=6, decimal_places=2, null=True, blank=True
@@ -180,3 +175,18 @@ class Session(models.Model):
             self.status = SessionStatus.FINISHED
             self.finished_at = timezone.now()
             self.save(update_fields=["status", "finished_at"])
+
+
+class SessionPayment(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="payments", verbose_name="Sessão")
+    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.PROTECT, verbose_name="Forma de pagamento")
+    amount = models.DecimalField("Valor", max_digits=6, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pagamento da Sessão"
+        verbose_name_plural = "Pagamentos da Sessão"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.payment_method.name} - R$ {self.amount}"

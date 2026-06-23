@@ -90,7 +90,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         return context
 
     def get_queryset(self):
-        qs = Session.objects.filter(company__id=self.kwargs.get("company_id")).select_related("child", "plan", "payment_method")
+        qs = Session.objects.filter(company__id=self.kwargs.get("company_id")).select_related("child", "plan").prefetch_related("payments", "payments__payment_method")
         status_filter = self.request.query_params.get("status")
         if status_filter:
             qs = qs.filter(status=status_filter)

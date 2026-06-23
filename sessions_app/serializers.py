@@ -38,8 +38,8 @@ class SessionCreateSerializer(serializers.ModelSerializer):
     """Usado pelo operador para abrir uma nova sessão."""
     child_id = serializers.UUIDField(required=False)
     child_name = serializers.CharField(required=False, write_only=True)
-    guardian_name = serializers.CharField(required=False, write_only=True)
-    guardian_whatsapp = serializers.CharField(required=False, write_only=True)
+    guardian_name = serializers.CharField(required=False, write_only=True, allow_blank=True, allow_null=True)
+    guardian_whatsapp = serializers.CharField(required=False, write_only=True, allow_blank=True, allow_null=True)
     plan = serializers.PrimaryKeyRelatedField(queryset=Plan.objects.all(), required=False, allow_null=True)
     custom_duration_minutes = serializers.IntegerField(required=False, write_only=True)
     custom_price = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, write_only=True)
